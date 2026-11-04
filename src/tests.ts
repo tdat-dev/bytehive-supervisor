@@ -46,11 +46,14 @@ function failureIn(text: string): string | null {
   );
 }
 
+/** "0 passed" means no test ran, and that proves nothing. */
+const some = (re: RegExp, text: string): boolean => Number(re.exec(text)?.[1] ?? 0) > 0;
+
 function passingIn(text: string): boolean {
   return (
-    /Test Files\s+\d+\s+passed/i.test(text) ||
-    /(\d+)\s+passed/i.test(text) ||
-    /(\d+)\s+passing/i.test(text) ||
+    some(/Test Files\s+(\d+)\s+passed/i, text) ||
+    some(/(\d+)\s+passed/i, text) ||
+    some(/(\d+)\s+passing/i, text) ||
     /test result:\s*ok/i.test(text) ||
     /^ok\s+\S+/m.test(text) ||
     /BUILD SUCCESSFUL/i.test(text) ||

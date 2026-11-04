@@ -14,6 +14,9 @@ describe("testsFromTail", () => {
   it("fails on mixed counts", () => {
     expect(testsFromTail("2 passed, 1 failed")).toEqual({ pass: false, detail: "1 failed" });
   });
+  it("does not count a run with no tests as passing", () => {
+    expect(testsFromTail("0 passed, 0 failed").pass).toBeNull();
+  });
   it("treats 0 failed as passing", () => {
     expect(testsFromTail("5 passed, 0 failed")).toEqual({ pass: true });
   });

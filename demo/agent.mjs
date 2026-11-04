@@ -19,7 +19,7 @@ const nextLine = () => new Promise((r) => { onLine = r; });
 
 function runTests() {
   const r = spawnSync(process.execPath, ["--test"], { encoding: "utf8" });
-  const count = (word) => Number(new RegExp(`^# ${word} (\\d+)`, "m").exec(r.stdout)?.[1] ?? 0);
+  const count = (word) => Number(new RegExp(`^\\S+ ${word} (\\d+)`, "m").exec(r.stdout)?.[1] ?? 0);
   return { passed: count("pass"), failed: count("fail") };
 }
 
