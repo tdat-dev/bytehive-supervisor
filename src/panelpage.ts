@@ -26,6 +26,15 @@ export const PANEL_PAGE = `<!doctype html>
   .note { margin-left: auto; font-size: 14px; color: var(--ink-3); }
   .note.bad { color: var(--red); }
   h1 { font-size: 44px; line-height: 1.1; font-weight: 600; letter-spacing: -.025em; margin-bottom: 24px; text-wrap: balance; }
+  .comb { display: flex; flex-wrap: wrap; gap: 6px 4px; margin-bottom: 26px; }
+  .cell { position: relative; width: 62px; height: 70px; }
+  .cell svg { display: block; width: 100%; height: 100%; }
+  .cell path { transition: fill .35s ease-out; }
+  .cell span { position: absolute; inset: 0; display: grid; place-items: center; font: 600 22px var(--sans); color: #08090b; }
+  .cell.red path { fill: var(--red); } .cell.yellow path { fill: var(--yellow); } .cell.green path { fill: var(--green); }
+  .clash { padding: 20px 22px; margin-bottom: 8px; border-radius: 14px; background: var(--panel); border: 1px solid rgba(240, 191, 106, .35); }
+  .clash .line { font-size: 20px; }
+  .clash .hint { color: var(--ink-2); font-size: 15px; }
   .agent { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 20px; padding: 24px 0; border-top: 1px solid var(--line); }
   .light { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 13px; font-weight: 500; }
   .dot { width: 22px; height: 22px; border-radius: 50%; background: currentColor; }
@@ -75,6 +84,8 @@ export const PANEL_PAGE = `<!doctype html>
   </header>
   <main>
     <h1 id="head">Reading your agents</h1>
+    <div class="comb" id="comb" aria-hidden="true"></div>
+    <div id="clashes"></div>
     <div id="list"></div>
   </main>
   <aside aria-label="Sent to agents">
@@ -109,8 +120,15 @@ function row(a) {
     + (acts ? '<div class="acts">' + acts + '</div>' : '') + '</div></article>';
 }
 
+const HEX = '<svg viewBox="0 0 24 27"><path d="M12 .6 23.4 7.2v12.6L12 26.4.6 19.8V7.2Z"/></svg>';
+
 function paint(s) {
   $('head').textContent = s.headline;
+  const comb = $('comb');
+  const ids = [...s.agents].sort((a, b) => a.name.localeCompare(b.name));
+  if (comb.children.length !== ids.length) comb.innerHTML = ids.map((a) => '<div class="cell" data-id="' + esc(a.id) + '">' + HEX + '<span>' + esc(a.name[0]) + '</span></div>').join('');
+  ids.forEach((a) => { const c = comb.querySelector('[data-id="' + a.id + '"]'); if (c) c.className = 'cell ' + a.light; });
+  $('clashes').innerHTML = s.conflicts.map((c) => '<div class="clash"><p class="line">' + esc(c.line) + '</p><p class="hint">' + esc(c.suggestion) + '</p><div class="acts"><button class="main" data-kind="sync" data-agent="' + esc(c.agent) + '">Tell ' + esc(c.agent) + ' to stop</button></div></div>').join('');
   // Rows are kept unless their own content changed, in order: a repaint between
   // a press and its release would swallow the click.
   const list = $('list');

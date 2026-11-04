@@ -1,7 +1,7 @@
 // A scripted coding agent for a repeatable demo. It behaves like the real
 // failure modes Supervisor exists for, against real files, real git and real
 // tests, but no model drives it. Run inside a demo workspace:
-//   node agent.mjs fake-done | loop | risky
+//   node agent.mjs fake-done | loop | risky | question | conflict-keep | conflict-yield
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -150,9 +150,88 @@ async function risky() {
   await nextLine();
 }
 
-const run = { "fake-done": fakeDone, loop, risky }[scenario];
+async function question() {
+  say("Task: write the changelog page");
+  await sleep(6000);
+  say("Reading docs/changelog.md");
+  await sleep(2000);
+  clear();
+  say("Which date format should the changelog use?");
+  say("❯ 1. 2026-11-04");
+  say("  2. Nov 4, 2026");
+  say("");
+  say("Enter to select, Esc to cancel");
+  const answer = await nextLine();
+  clear();
+  say(`Using format ${answer}.`);
+  writeFileSync("src/changelog.js", 'export const dateFormat = "iso";\n');
+  await sleep(1500);
+  say("Running npm test");
+  const t = runTests();
+  say(`${t.passed} passed, ${t.failed} failed`);
+  moveCardToDone();
+  say("Moved the card to Done.");
+  await nextLine();
+}
+
+async function conflictKeep() {
+  say("Task: free shipping over $50");
+  await sleep(3000);
+  say("Editing src/cart.js");
+  writeFileSync("src/cart.js", `export function shipping(total) {
+  return total >= 50 ? 0 : 5;
+}
+`);
+  await sleep(1500);
+  say("Running npm test");
+  const t = runTests();
+  say(`${t.passed} passed, ${t.failed} failed`);
+  say("Still working on the cart page.");
+  let n = 0;
+  const stay = setInterval(() => say(`Checking the cart page (${++n})`), 1500);
+  await sleep(250000);
+  clearInterval(stay);
+  moveCardToDone();
+  say("Moved the card to Done.");
+  await nextLine();
+}
+
+async function conflictYield() {
+  say("Task: cart discount codes");
+  await sleep(4500);
+  say("Editing src/cart.js");
+  writeFileSync("src/cart.js", `export function shipping(total, code) {
+  return code === "FREE" ? 0 : 5;
+}
+`);
+  let n = 0;
+  const stay = setInterval(() => say(`Checking the discount form (${++n})`), 1500);
+  await nextLine();
+  clearInterval(stay);
+  clear();
+  say("Understood. Undoing my edit to src/cart.js.");
+  spawnSync("git", ["checkout", "--", "src/cart.js"]);
+  writeFileSync("src/discount.js", "export const codes = new Map();\n");
+  await sleep(1500);
+  say("Moved my work to src/discount.js.");
+  say("Running npm test");
+  const t = runTests();
+  say(`${t.passed} passed, ${t.failed} failed`);
+  moveCardToDone();
+  say("Moved the card to Done.");
+  await nextLine();
+}
+
+const run = {
+  "fake-done": fakeDone,
+  loop,
+  risky,
+  question,
+  "conflict-keep": conflictKeep,
+  "conflict-yield": conflictYield,
+}[scenario];
 if (!run) {
-  say("Usage: node agent.mjs fake-done | loop | risky");
+  say("Usage: node agent.mjs fake-done | loop | risky | question | conflict-keep | conflict-yield");
   process.exit(1);
 }
 await run();

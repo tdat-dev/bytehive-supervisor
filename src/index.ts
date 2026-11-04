@@ -33,7 +33,7 @@ import { readAsk } from "./asking.js";
 import { classifyCommand } from "./gate.js";
 import { appendOutboxLine, buildOutboxLine } from "./outbox.js";
 import { PANEL_PORT, startPanel, type PanelSnapshot } from "./panel.js";
-import { actionMessage, headline, orderAgents, panelAgent, type PanelAction, type PanelAgent } from "./panelstate.js";
+import { actionMessage, headline, orderAgents, panelAgent, panelConflict, type PanelAction, type PanelAgent, type PanelConflict } from "./panelstate.js";
 import { PlainWords, askPrompt, runMuse, verdictPrompt } from "./muse.js";
 import { keptVerdict } from "./panelstate.js";
 
@@ -103,6 +103,7 @@ async function main(): Promise<void> {
 
   const words = new PlainWords(args.muse ? runMuse : null);
   let agents: PanelAgent[] = [];
+  let conflicts: PanelConflict[] = [];
   let latest: FleetSnapshot = { agents: [], output: {} };
   const sent: PanelSnapshot["sent"] = [];
   let fleetOk = false;
@@ -117,7 +118,9 @@ async function main(): Promise<void> {
     }
     const target = latest.agents.find((a) => a.name === action.agent);
     if (!target?.projectDir) return { ok: false, error: `${action.agent} is not in the fleet` };
-    const message = actionMessage(action, agents.find((a) => a.name === action.agent));
+    const message = action.kind === "sync"
+      ? conflicts.find((c) => c.agent === action.agent)?.message ?? null
+      : actionMessage(action, agents.find((a) => a.name === action.agent));
     if (!message) return { ok: false, error: "nothing to send" };
     const now = Date.now();
     await appendOutboxLine(target.projectDir, buildOutboxLine({ from: "Supervisor", to: target.name, message, now }));
@@ -129,7 +132,7 @@ async function main(): Promise<void> {
 
   if (args.panelPort !== null) {
     startPanel({
-      snapshot: () => ({ headline: headline(agents), agents, sent, fleetOk, fleetNote, checkedAt }),
+      snapshot: () => ({ headline: headline(agents), agents, conflicts, sent, fleetOk, fleetNote, checkedAt }),
       act,
     }, args.panelPort);
     console.log(`Panel: http://127.0.0.1:${args.panelPort}`);
@@ -187,6 +190,7 @@ async function main(): Promise<void> {
         const { files } = await collectDiffFiles(dir);
         diffFilesByDir.set(dir, files);
       }
+      const nextConflicts: PanelConflict[] = [];
       for (const c of findFileConflicts(
         samples.map((s) => ({
           name: s.name,
@@ -195,8 +199,11 @@ async function main(): Promise<void> {
         })),
       )) {
         console.log(`  ${c.line}`);
-        console.log(`  ${suggestPartition({ agents: c.agents, target: c.file, kind: "file" })}`);
+        const suggestion = suggestPartition({ agents: c.agents, target: c.file, kind: "file" });
+        console.log(`  ${suggestion}`);
+        nextConflicts.push(panelConflict(c, suggestion));
       }
+      conflicts = nextConflicts;
       const checked = new Map<string, Checked>();
       for (const s of samples) {
         if (!s.finished || !s.projectDir) continue;

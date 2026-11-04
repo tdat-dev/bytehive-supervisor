@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionMessage, evidenceRows, headline, keptVerdict, orderAgents, panelAgent, type AgentFacts, type PanelAgent } from "./panelstate.js";
+import { actionMessage, evidenceRows, headline, keptVerdict, orderAgents, panelConflict, panelAgent, type AgentFacts, type PanelAgent } from "./panelstate.js";
 import { verdictDone, type DoneEvidence } from "./verdict.js";
 
 const facts = (over: Partial<AgentFacts> = {}): AgentFacts => ({
@@ -121,5 +121,14 @@ describe("keptVerdict", () => {
   it("drops it when the agent shows something new", () => {
     expect(keptVerdict({ tailHash: "a", checked: "red" }, "b")).toBeNull();
     expect(keptVerdict(undefined, "a")).toBeNull();
+  });
+});
+
+describe("panelConflict", () => {
+  it("talks to the second agent and fits one burst", () => {
+    const c = panelConflict({ agents: ["Finn", "Gia"], file: "src/cart.js", line: "Finn and Gia both changed src/cart.js" }, "→ Finn keeps src/cart.js, Gia syncs with Finn first");
+    expect(c.agent).toBe("Gia");
+    expect(c.suggestion).toBe("Finn keeps src/cart.js, Gia syncs with Finn first");
+    expect(c.message.length).toBeLessThanOrEqual(120);
   });
 });

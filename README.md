@@ -20,7 +20,7 @@ that can help.
 | **Plain questions.** Reads what an agent is asking off its screen and marks the safe answer. (`asking.ts`) | Works |
 | **Risk gate.** `git push --force`, `rm -rf`, hard reset and friends are held in red until a person answers. It reads the CLI's own permission prompt, so an agent started with permission prompts off is not gated. (`gate.ts`) | Works |
 | **Plain words from a Meta model.** Muse, Meta's coding agent, rewrites red verdicts and risky questions in one sentence through `muse exec`. It uses your own Muse login, no key. (`muse.ts`) | Works, about 30 seconds per sentence |
-| **Conflict alarms.** Two agents on one card or one file, across worktrees of a repo. (`cardconflicts.ts`, `fileconflicts.ts`) | Works in the console output, not on the panel |
+| **Conflict alarms.** Two agents on one file, across worktrees of a repo, with a button that tells the second to stop. (`fileconflicts.ts`) Two agents on one card shows in the console only. (`cardconflicts.ts`) | Works |
 | **Dollars per agent.** `Ana spent ~$3 of ~$20`, with a budget alert. (`cost.ts`) | Tested module, not wired to real usage yet |
 | **Back to last working.** A checkpoint and a Restore button. | Not built |
 
@@ -71,6 +71,9 @@ node demo/setup.mjs D:\supervisor-demo
 node D:\path\to\demo\agent.mjs fake-done   # in invoice-api
 node D:\path\to\demo\agent.mjs loop        # in upload-service
 node D:\path\to\demo\agent.mjs risky       # in release-tools
+node D:\path\to\demo\agent.mjs question    # in docs-site
+node D:\path\to\demo\agent.mjs conflict-keep   # in checkout-web
+node D:\path\to\demo\agent.mjs conflict-yield  # in checkout-web-gia, a worktree of it
 ```
 
 The recorded demo shortens the stuck and waiting thresholds with `--stuck-after`

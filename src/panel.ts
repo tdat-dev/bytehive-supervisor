@@ -4,13 +4,14 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { PANEL_PAGE } from "./panelpage.js";
-import type { PanelAction, PanelAgent } from "./panelstate.js";
+import type { PanelAction, PanelAgent, PanelConflict } from "./panelstate.js";
 
 export const PANEL_PORT = 8599;
 
 export interface PanelSnapshot {
   headline: string;
   agents: PanelAgent[];
+  conflicts: PanelConflict[];
   sent: Array<{ at: number; to: string; message: string }>;
   fleetOk: boolean;
   fleetNote: string;
@@ -43,6 +44,7 @@ export function parseAction(body: string): PanelAction | null {
   if (typeof o.agent !== "string" || !o.agent) return null;
   if (o.kind === "recheck") return { kind: "recheck", agent: o.agent };
   if (o.kind === "sendback") return { kind: "sendback", agent: o.agent };
+  if (o.kind === "sync") return { kind: "sync", agent: o.agent };
   if (o.kind === "answer" && typeof o.option === "number" && Number.isInteger(o.option)) {
     return { kind: "answer", agent: o.agent, option: o.option };
   }

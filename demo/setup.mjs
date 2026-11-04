@@ -54,4 +54,27 @@ repo("release-tools", "Ship the release branch", "Cleo", {
   "src/release.js": 'export const channel = "stable";\n',
   "test/release.test.js": 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { channel } from "../src/release.js";\n\ntest("is stable", () => {\n  assert.equal(channel, "stable");\n});\n',
 });
+repo("docs-site", "Write the changelog page", "Eve", {
+  "src/changelog.js": 'export const dateFormat = "";\n',
+  "test/changelog.test.js": 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { dateFormat } from "../src/changelog.js";\n\ntest("is a string", () => {\n  assert.equal(typeof dateFormat, "string");\n});\n',
+});
+const cart = repo("checkout-web", "Free shipping over $50", "Finn", {
+  "src/cart.js": "export function shipping(total) {\n  return 5;\n}\n",
+  "test/cart.test.js": 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { shipping } from "../src/cart.js";\n\ntest("charges for small orders", () => {\n  assert.equal(shipping(10), 5);\n});\n',
+});
+// Gia works on the same repo from a worktree of its own, as ByteHive sets up.
+const gia = join(root, "checkout-web-gia");
+git(cart, "worktree", "add", "-q", "-b", "gia/discounts", gia);
+mkdirSync(join(gia, ".bytehive"), { recursive: true });
+writeFileSync(join(gia, ".bytehive", "board.json"), JSON.stringify({
+  version: 2,
+  lists: [
+    { id: "doing", title: "Doing", cards: [{ id: "c1", title: "Cart discount codes", desc: "", assignee: "Gia" }] },
+    { id: "done", title: "Done", cards: [] },
+  ],
+}, null, 2));
+repo("pricing-lib", "Add a percent discount", "Hana", {
+  "src/price.js": "export function discount(total, percent) {\n  throw new Error(\"to write\");\n}\n",
+  "test/price.test.js": 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { discount } from "../src/price.js";\n\ntest("takes the percent off", () => {\n  assert.equal(discount(200, 25), 150);\n});\n',
+});
 console.log(`Demo workspaces ready in ${root}`);

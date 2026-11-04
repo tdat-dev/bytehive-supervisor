@@ -27,7 +27,7 @@ describe("parseAction", () => {
 
 describe("the server", () => {
   const host: PanelHost = {
-    snapshot: () => ({ headline: "All fine", agents: [], sent: [], fleetOk: true, fleetNote: "", checkedAt: 1 }),
+    snapshot: () => ({ headline: "All fine", agents: [], conflicts: [], sent: [], fleetOk: true, fleetNote: "", checkedAt: 1 }),
     act: vi.fn(async () => ({ ok: true })),
   };
   let close = () => {};

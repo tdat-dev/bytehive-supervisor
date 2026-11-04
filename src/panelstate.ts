@@ -145,12 +145,32 @@ export type PanelAction =
   | { kind: "rescue"; agent: string; rescue: RescueKind }
   | { kind: "answer"; agent: string; option: number }
   | { kind: "sendback"; agent: string }
+  | { kind: "sync"; agent: string }
   | { kind: "recheck"; agent: string };
 
 /** The line typed into an agent for an action, or null when nothing is typed.
  *  A numbered prompt takes the option's number, a y/n prompt its letter. */
+/** Two agents on one file: who should stop, and the line that tells them. */
+export interface PanelConflict {
+  line: string;
+  suggestion: string;
+  /** The agent the button talks to. */
+  agent: string;
+  message: string;
+}
+
+export function panelConflict(c: { agents: [string, string]; file: string; line: string }, suggestion: string): PanelConflict {
+  const [first, second] = c.agents;
+  return {
+    line: c.line.replace(/^!\s*CONFLICT\s*/, ""),
+    suggestion: suggestion.replace(/^→\s*/, ""),
+    agent: second,
+    message: `Stop editing ${c.file}: ${first} is changing it too. Undo your edit there and sync with ${first}.`,
+  };
+}
+
 export function actionMessage(action: PanelAction, agent: PanelAgent | undefined): string | null {
-  if (action.kind === "recheck") return null;
+  if (action.kind === "recheck" || action.kind === "sync") return null;
   if (action.kind === "rescue") return rescueLine(action.rescue);
   if (action.kind === "sendback") return agent?.sendBack ? `Not accepted. ${agent.line} Fix it, run the tests, then report.` : null;
   const ask = agent?.ask;
