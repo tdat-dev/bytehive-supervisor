@@ -1,125 +1,104 @@
-# maestro-supervisor
+# ByteHive Supervisor
 
-> Supervisor là module mới làm trong hackathon 26/10 tới 4/11. Maestro (v0.10.x) chỉ là nền tảng có sẵn mà nó cắm vào, không phải phần đem đi chấm.
+Supervisor watches a fleet of AI coding agents and answers for the human in
+charge: who is stuck, who is really done, and what needs a click. One light and
+one plain sentence per agent, with the evidence under it and only the buttons
+that can help.
 
-Supervisor watches a fleet of AI coding agents running inside [Maestro](https://github.com/tdat-dev/maestro)
-and answers for the human in charge: who is stuck, who is really done, what each
-agent costs, and what needs a click. One engine under the hood (evidence from
-screens, diffs, tests, board), one plain sentence plus one button on top.
+> **What is new.** Everything in this repository was written during the Meta
+> hackathon, 26 October to 4 November 2026. It plugs into
+> [ByteHive](https://github.com/tdat-dev/maestro-releases), the desktop app
+> that runs the agents. ByteHive existed before the hackathon and is not part
+> of this entry; Supervisor touches none of its code.
 
-## The 5 must-ship features (locked)
+## What it does today
 
-1. **Traffic-light stuck radar.** Minutes stuck + loop count + auto needs-you.
-   Skin: green / yellow / red with `Stuck 12m, looping 5x`. (`stuck.ts`, `traffic.ts`)
-2. **Fake-done verdict + Recheck.** Never trusts "done". Red when the diff is
-   empty, a stub or TODO is left, tests fail, or the board card is still open,
-   with the reason in plain words (`Not runnable: login step fails`) and a
-   Recheck button. (`verdict.ts`)
-3. **One-click rescue + plain questions.** Nudge / retry-step prompts to exactly
-   the stuck pane after approval, plus agent questions translated to plain
-   words with a safe answer. Rescue lines stay short so they deliver in one
-   burst. (`outbox.ts`, `handover.ts`)
-4. **Real-money cost + budget alert.** `Ana spent ~$3 of ~$20`, alert at your
-   own limit. No tokens, no $/hr jargon. (`cost.ts`)
-5. **Safety net: risk gate + Back to last working.** `rm -rf`, force push,
-   hard reset and friends wait for one click; a checkpoint on green gives you a
-   Restore button after a bad edit. (`gate.ts`)
+| | Status |
+|---|---|
+| **Fake-done verdict.** Never trusts "done": a claim is checked against the diff, a TODO or stub scan, the tests on the agent's screen and the board card. Red with the reason, plus Send back and Recheck. (`verdict.ts`, `evidence.ts`, `tests.ts`) | Works |
+| **Stuck radar.** Red when an agent repeats the same screen or goes silent, with one rescue button. (`stuck.ts`, `traffic.ts`, `rescuepick.ts`) | Works |
+| **Plain questions.** Reads what an agent is asking off its screen and marks the safe answer. (`asking.ts`) | Works |
+| **Risk gate.** `git push --force`, `rm -rf`, hard reset and friends are held in red until a person answers. It reads the CLI's own permission prompt, so an agent started with permission prompts off is not gated. (`gate.ts`) | Works |
+| **Plain words from a Meta model.** Muse, Meta's coding agent, rewrites red verdicts and risky questions in one sentence through `muse exec`. It uses your own Muse login, no key. (`muse.ts`) | Works, about 30 seconds per sentence |
+| **Conflict alarms.** Two agents on one card or one file, across worktrees of a repo. (`cardconflicts.ts`, `fileconflicts.ts`) | Works in the console output, not on the panel |
+| **Dollars per agent.** `Ana spent ~$3 of ~$20`, with a budget alert. (`cost.ts`) | Tested module, not wired to real usage yet |
+| **Back to last working.** A checkpoint and a Restore button. | Not built |
 
-## Who it is for (Impact)
+## How it plugs into ByteHive
 
-- **Pro devs** who code with agents overnight: no more waking up to 6 hours of
-  loops, fake-dones, or out-of-scope edits. Evidence over claims.
-- **Non-tech vibe coders** who want a working product: traffic lights instead
-  of terminal walls, verdicts in plain words, rescue in one click, money in
-  dollars, and a way back when the agent breaks things.
-- **Tech-savvy fleet commanders** running 6-12 panes: one screen that only
-  shows the panes needing a human, conflicts caught before merge, handover
-  briefs that let a new model continue with zero re-explaining.
+Supervisor is a separate process. It reads what ByteHive already exposes and
+writes to one place:
 
-## Demos (3 minutes each)
+- `GET /api/fleet` on the local dashboard server (`http://127.0.0.1:8477`, turn
+  it on in Settings, Remote): every agent's status plus a tail of its screen.
+- `.bytehive/board.json` in each workspace: the kanban board, read only.
+- `.bytehive/outbox.jsonl` in each workspace: one line per button press. ByteHive
+  types that line into exactly that agent. Nothing is written unless a person
+  presses a button.
 
-- **D1, fake-done catch:** an agent reports done on stub code with a failing
-  test. The verdict card flips red live with the reason; after the fix and a
-  Recheck it flips green.
-- **D2, stuck rescue:** a red light with minutes + loop count, one Nudge that
-  resumes the agent, then a Restore after a deliberately bad edit.
-
-Stories first for generalist judges, evidence (diff, tests, minutes, counts)
-right underneath for engineer judges.
-
-## How it plugs into Maestro
-
-Supervisor is a **separate process**. It touches no Maestro code. It reads two
-things Maestro already exposes and writes one:
-
-- `GET /api/fleet` on the local dashboard HTTP server (`http://127.0.0.1:8477`,
-  enable in Maestro under Settings, Remote): a JSON snapshot of every agent
-  (`needs` / `active` / `idle` / `stopped`) plus a plain-text tail of each
-  agent's screen. A non-browser client just sends the `X-Maestro: 1` header.
-- `.maestro/board.json` in each workspace folder: the kanban board
-  (`{ version: 2, lists: [...] }`), read straight from disk, never written.
-- `.maestro/outbox.jsonl` in each workspace folder: one JSON line per rescue
-  message (`{ from, to, message, now }`). Maestro drains it and types the
-  message into the target agent with Enter. Short lines only.
-
-## Signal rule
-
-Five queries, not a schema: stuck? / done-really? / asking? / spent? / risky?
-A signal only ships if it can change the traffic light, the verdict card, or
-the cost line.
+Folders still on the old `.maestro` name are read too.
 
 ## Quickstart
 
+Windows 10 or 11, Node 20 or newer, and [ByteHive](https://github.com/tdat-dev/maestro-releases/releases/latest)
+with Settings, Remote turned on. For Muse's sentences, install Muse and log in;
+without it the panel keeps the rule-based sentence.
+
 ```powershell
-# 1. In Maestro: Settings, Remote, turn the dashboard on (no password needed on localhost)
-# 2. Run the watcher:
 npm install
 npm run build
 npm start -- --dir D:\my-project
+# then open http://127.0.0.1:8599
 ```
 
-Options: `--fleet http://127.0.0.1:8477`, `--dir <workspace>...` (repeatable),
-`--interval <seconds>` (default 5), `--cookie <session>` when the dashboard has a password.
+Options: `--fleet URL`, `--dir <workspace>` (repeatable), `--interval <seconds>`,
+`--stuck-after <seconds>`, `--needs-after <seconds>`, `--panel-port <n>`,
+`--no-panel`, `--no-muse`, `--password <dashboard password>`, `--cookie <session>`.
 
 ```powershell
-npm test   # vitest unit tests
+npm test
 ```
+
+## The demo
+
+`demo/setup.mjs` builds three small real git repos with real tests and a board.
+`demo/agent.mjs` is a scripted agent, so the run can be repeated: it edits real
+files, runs the real tests and reads what you send it, but no model drives it.
+Run it as a custom agent in ByteHive, one per workspace:
+
+```powershell
+node demo/setup.mjs D:\supervisor-demo
+node D:\path\to\demo\agent.mjs fake-done   # in invoice-api
+node D:\path\to\demo\agent.mjs loop        # in upload-service
+node D:\path\to\demo\agent.mjs risky       # in release-tools
+```
+
+The recorded demo shortens the stuck and waiting thresholds with `--stuck-after`
+and `--needs-after`.
 
 ## Layout
 
 ```
 src/
-  fleet.ts      poll + parse the /api/fleet snapshot (read-only)
-  board.ts      read .maestro/board.json from disk (read-only)
-  evidence.ts   git diff + stub scan + board Done for verdicts
-  outbox.ts     rescue send path: short lines into .maestro/outbox.jsonl
-  stuck.ts      stuck / waiting-too-long / loop detector (pure, tested)
-  traffic.ts    green / yellow / red skin over alerts (pure, tested)
-  verdict.ts    fake-done verdict from diff + tests + board (pure, tested)
-  report.ts     verdict output lines for the watch CLI (pure, tested)
-  cost.ts       real-money cost line + budget alert (pure, tested)
-  gate.ts       risky-command matcher behind one human click (pure, tested)
-  summarize.ts  progress summarizer via a Meta model (prompt builder done, wiring next)
-  handover.ts   handover suggestion (pure, tested; execution needs approval)
-  index.ts      `watch` CLI: poll, detect, print
+  index.ts      watch loop: poll, check, print, serve the panel
+  panel.ts      local page and its actions, 127.0.0.1 only
+  panelpage.ts  the page itself
+  panelstate.ts one light, one sentence, the right buttons (pure, tested)
+  fleet.ts      read /api/fleet
+  board.ts      read the board
+  evidence.ts   git diff, stub scan, board Done
+  tests.ts      test results off the screen tail
+  verdict.ts    fake-done verdict (pure, tested)
+  stuck.ts      stuck, waiting and loop detector (pure, tested)
+  asking.ts     what an agent is asking, and the safe answer
+  gate.ts       risky-command matcher (pure, tested)
+  rescue.ts     short lines that unstick an agent
+  outbox.ts     the only write path
+  muse.ts       plain words through `muse exec`
+  paths.ts      .bytehive, or .maestro for an old folder
+demo/           the repeatable demo
+docs/           the pain map behind these features
 ```
-
-## 10-day build order
-
-- Days 1-2: read-only watcher + stuck radar with traffic lights (this skeleton).
-- Days 3-4: fake-done verdict + Recheck wired to real diffs, tests, board.
-- Days 5-6: one-click rescue + plain questions + real-money cost wired to usage.
-- Day 7: risk gate + checkpoints + Restore.
-- Days 8-9: D1 + D2 demos running end to end + 3-minute video.
-- Day 10: buffer + submit.
-
-Solo entry. Work happens outside the WhaleLO shift (14:00-17:30).
-
-## Roadmap (not in the 10 days)
-
-Pre-merge conflict view, risk-ranked review queue, burn-rate analytics,
-per-CLI parity (Gemini/Qwen/Copilot), board lock service, voice dispatch,
-scheduled agents, cross-workspace fleets, full browser-agent ops.
 
 ## License
 
