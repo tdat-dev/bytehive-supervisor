@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionMessage, evidenceRows, headline, orderAgents, panelAgent, type AgentFacts, type PanelAgent } from "./panelstate.js";
+import { actionMessage, evidenceRows, headline, keptVerdict, orderAgents, panelAgent, type AgentFacts, type PanelAgent } from "./panelstate.js";
 import { verdictDone, type DoneEvidence } from "./verdict.js";
 
 const facts = (over: Partial<AgentFacts> = {}): AgentFacts => ({
@@ -110,5 +110,16 @@ describe("actionMessage", () => {
     const failed = { sendBack: true, line: "Not done: stub or TODO left in the changed code." } as PanelAgent;
     expect(actionMessage({ kind: "sendback", agent: "Ana" }, failed)).toBe("Not accepted. Not done: stub or TODO left in the changed code. Fix it, run the tests, then report.");
     expect(actionMessage({ kind: "sendback", agent: "Ana" }, { sendBack: false } as PanelAgent)).toBeNull();
+  });
+});
+
+describe("keptVerdict", () => {
+  it("keeps the verdict while the screen is the same", () => {
+    expect(keptVerdict({ tailHash: "a", checked: "red" }, "a")).toBe("red");
+  });
+
+  it("drops it when the agent shows something new", () => {
+    expect(keptVerdict({ tailHash: "a", checked: "red" }, "b")).toBeNull();
+    expect(keptVerdict(undefined, "a")).toBeNull();
   });
 });

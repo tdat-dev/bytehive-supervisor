@@ -160,3 +160,8 @@ export function actionMessage(action: PanelAction, agent: PanelAgent | undefined
   if (/^no$/i.test(label)) return "n";
   return String(action.option + 1);
 }
+
+/** The last verdict, while the agent's screen has not changed since it. */
+export function keptVerdict<T>(last: { tailHash: string; checked: T } | undefined, tailHash: string): T | null {
+  return last && last.tailHash === tailHash ? last.checked : null;
+}

@@ -65,7 +65,7 @@ test("adds tax", () => {
   say("Got it. Fixing src/invoice.js");
   writeFileSync("src/invoice.js", `export function total(lines, taxRate = 0) {
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.qty, 0);
-  return subtotal * (1 + taxRate);
+  return Math.round(subtotal * (1 + taxRate) * 100) / 100;
 }
 `);
   await sleep(2000);
@@ -97,9 +97,25 @@ async function loop() {
   say("Tried: the same upload 40 times.");
   say("Failed: the test server URL in .env is wrong.");
   say("Need: the right URL, or a stub server for the test.");
-  await sleep(1500);
+  await sleep(2500);
   say("");
-  say("Stopped looping. Waiting for you.");
+  say("Using a stub server, and retrying inside upload().");
+  writeFileSync("src/upload.js", `export async function upload(send, file, tries = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      return await send(file);
+    } catch (e) {
+      if (i >= tries) throw e;
+    }
+  }
+}
+`);
+  await sleep(2000);
+  say("Running npm test");
+  const t = runTests();
+  say(`${t.passed} passed, ${t.failed} failed`);
+  moveCardToDone();
+  say("Moved the card to Done.");
   await nextLine();
 }
 
@@ -122,7 +138,14 @@ async function risky() {
   if (answer === "1" || answer === "y") say("Force pushing.");
   else {
     say("OK, nothing was pushed.");
-    say("Opening a pull request instead.");
+    say("Writing the release notes for a pull request instead.");
+    writeFileSync("RELEASE.md", "# Release\n\nOpen a pull request against main. Nothing was force pushed.\n");
+    await sleep(2000);
+    say("Running npm test");
+    const t = runTests();
+    say(`${t.passed} passed, ${t.failed} failed`);
+    moveCardToDone();
+    say("Moved the card to Done.");
   }
   await nextLine();
 }

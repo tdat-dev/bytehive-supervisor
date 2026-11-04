@@ -111,7 +111,26 @@ function row(a) {
 
 function paint(s) {
   $('head').textContent = s.headline;
-  $('list').innerHTML = s.agents.map(row).join('');
+  // Rows are kept unless their own content changed, in order: a repaint between
+  // a press and its release would swallow the click.
+  const list = $('list');
+  const keep = new Map([...list.children].map((n) => [n.dataset.id, n]));
+  s.agents.forEach((a, i) => {
+    const html = row(a);
+    let n = keep.get(a.id);
+    if (!n || n.dataset.html !== html) {
+      const box = document.createElement('div');
+      box.innerHTML = html;
+      const fresh = box.firstElementChild;
+      fresh.dataset.id = a.id;
+      fresh.dataset.html = html;
+      if (n) n.replaceWith(fresh);
+      n = fresh;
+    }
+    keep.delete(a.id);
+    if (list.children[i] !== n) list.insertBefore(n, list.children[i] ?? null);
+  });
+  keep.forEach((n) => n.remove());
   $('sent').innerHTML = s.sent.length
     ? s.sent.map((m) => '<li><time>' + new Date(m.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' }) + '</time><b>' + esc(m.to) + '</b><q>' + esc(m.message) + '</q></li>').join('')
     : '<li class="empty">Nothing yet. Every line a button types into an agent shows here.</li>';

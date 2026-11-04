@@ -35,6 +35,7 @@ import { appendOutboxLine, buildOutboxLine } from "./outbox.js";
 import { PANEL_PORT, startPanel, type PanelSnapshot } from "./panel.js";
 import { actionMessage, headline, orderAgents, panelAgent, type PanelAction, type PanelAgent } from "./panelstate.js";
 import { PlainWords, askPrompt, runMuse, verdictPrompt } from "./muse.js";
+import { keptVerdict } from "./panelstate.js";
 
 interface Args {
   fleet: string;
@@ -98,6 +99,7 @@ async function main(): Promise<void> {
   const lastSummaryState = new Map<string, string>();
   // Waiting questions, printed once per episode (cleared when resolved).
   const lastAskState = new Map<string, string>();
+  const lastChecked = new Map<string, { tailHash: string; checked: Checked }>();
 
   const words = new PlainWords(args.muse ? runMuse : null);
   let agents: PanelAgent[] = [];
@@ -210,7 +212,18 @@ async function main(): Promise<void> {
         console.log("  " + formatVerdictLine(s.name, s.finished, result));
         for (const w of warnings) console.log(`    (evidence warn: ${w})`);
       }
-      const alerts = detectStuck(tracker, now, args.detector);
+      // Opening an agent in ByteHive repaints its terminal, and for a moment the
+      // app calls it working again. Same screen, same work: the verdict stands.
+      for (const s of samples) {
+        const now_ = checked.get(s.id);
+        if (now_) lastChecked.set(s.id, { tailHash: s.tailHash, checked: now_ });
+        else {
+          const kept = keptVerdict(lastChecked.get(s.id), s.tailHash);
+          if (kept) checked.set(s.id, kept);
+          else lastChecked.delete(s.id);
+        }
+      }
+      const alerts = detectStuck(tracker, now, args.detector).filter((a) => !checked.has(a.agentId));
       const waitingIds = new Set(alerts.filter((a) => a.kind === "waiting").map((a) => a.agentId));
       for (const id of [...lastAskState.keys()]) if (!waitingIds.has(id)) lastAskState.delete(id);
       for (const alert of alerts) {
