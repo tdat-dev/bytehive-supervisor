@@ -25,11 +25,11 @@ describe("rescueBody", () => {
 });
 
 describe("appendOutboxLine", () => {
-  it("creates .maestro/outbox.jsonl and appends", async () => {
+  it("creates .bytehive/outbox.jsonl and appends", async () => {
     const dir = await mkdtemp(join(tmpdir(), "sup-outbox-"));
     await appendOutboxLine(dir, "line one\n");
     await appendOutboxLine(dir, "line two\n");
-    const content = await readFile(join(dir, ".maestro", "outbox.jsonl"), "utf8");
+    const content = await readFile(join(dir, ".bytehive", "outbox.jsonl"), "utf8");
     expect(content).toBe("line one\nline two\n");
   });
 });

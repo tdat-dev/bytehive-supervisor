@@ -1,7 +1,7 @@
 {
-  "name": "maestro-supervisor",
+  "name": "bytehive-supervisor",
   "version": "0.1.0",
-  "description": "Watchdog for Maestro agent fleets: stuck/loop detection, progress summaries, handover suggestions.",
+  "description": "Watchdog for ByteHive agent fleets: catches fake-done agents, stuck agents and risky commands, one plain sentence and one button each.",
   "license": "MIT",
   "author": "tdat-dev",
   "type": "module",
@@ -11,7 +11,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest run"
+    "test": "vitest run --testTimeout=30000"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

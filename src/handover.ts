@@ -1,5 +1,5 @@
 // Handover suggestion (days 6-7): who should take over a stuck agent's task.
-// Pure suggestion only — the actual handover stays behind Maestro's manual
+// Pure suggestion only — the actual handover stays behind ByteHive's manual
 // approval, and this module never drives an agent by itself.
 
 export interface HandoverCandidate {

@@ -15,9 +15,9 @@ describe("slugPane", () => {
 });
 
 describe("summaryPath", () => {
-  it("points inside the project .maestro dir", () => {
+  it("points inside the project state dir", () => {
     const p = summaryPath("/w/proj", "Codex 1");
-    expect(p.replace(/\\/g, "/")).toBe("/w/proj/.maestro/summary-codex-1.md");
+    expect(p.replace(/\\/g, "/")).toBe("/w/proj/.bytehive/summary-codex-1.md");
   });
 });
 
@@ -42,6 +42,6 @@ describe("readAgentSummary", () => {
   it("reads the slugged path", () => {
     let seen = "";
     readAgentSummary("/w/proj", "Claude Code 1", (p) => { seen = p; return "ok"; });
-    expect(seen.replace(/\\/g, "/")).toBe("/w/proj/.maestro/summary-claude-code-1.md");
+    expect(seen.replace(/\\/g, "/")).toBe("/w/proj/.bytehive/summary-claude-code-1.md");
   });
 });

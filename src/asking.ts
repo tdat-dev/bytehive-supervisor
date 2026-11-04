@@ -1,6 +1,6 @@
 // Plain-questions skin: read what an agent is asking from its screen tail,
 // restate it in plain words, and point at the safe answer. Pure: the tail
-// comes from the fleet snapshot, no Maestro code involved.
+// comes from the fleet snapshot, no ByteHive code involved.
 
 export type AskKind = "run" | "edit" | "question";
 
@@ -92,10 +92,12 @@ export function readAsk(tail: string): PlainAsk | null {
     : kind === "edit"
       ? "The agent wants to change a file. Allow it?"
       : "The agent is asking you to pick one.");
-  // The command or file is usually the odd line sitting with the prompt.
-  const detail = lines.find((l) =>
-    l !== question && !OPTION.test(l) && /[/$\\]/.test(l) && l.length < 160 && !LIVE_HINT.test(l),
-  );
+  // A run prompt shows the command on the line above its question; otherwise
+  // the command or file is the odd line sitting with the prompt.
+  const above = lines[lines.indexOf(question) - 1];
+  const detail = kind === "run" && above && !OPTION.test(above) && !RUN_HINT.test(above)
+    ? above
+    : lines.find((l) => l !== question && !OPTION.test(l) && /[/$\\]/.test(l) && l.length < 160 && !LIVE_HINT.test(l));
   const safeIndex = pickSafe(kind, options);
   return { kind, question, options, safeIndex, hint: hintFor(kind, safeIndex), ...(detail ? { detail } : {}) };
 }

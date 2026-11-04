@@ -4,6 +4,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { stateDir } from "./paths.js";
 
 export const SUMMARY_MAX_CHARS = 500;
 
@@ -18,7 +19,7 @@ export function slugPane(name: string): string {
 
 /** Absolute path of the agent's summary file inside its project dir. */
 export function summaryPath(projectDir: string, paneName: string): string {
-  return join(projectDir, ".maestro", `summary-${slugPane(paneName)}.md`);
+  return join(stateDir(projectDir), `summary-${slugPane(paneName)}.md`);
 }
 
 /** Read and normalize the agent's summary, or null when missing/blank.

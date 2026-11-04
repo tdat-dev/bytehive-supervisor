@@ -1,9 +1,9 @@
-// Read-only view of the Maestro fleet, through the local dashboard HTTP API
-// Maestro already serves (Settings → Remote). No Maestro code is touched:
+// Read-only view of the ByteHive fleet, through the local dashboard HTTP API
+// ByteHive already serves (Settings → Remote). No ByteHive code is touched:
 // Supervisor is a separate process that polls GET /api/fleet the same way
 // the dashboard page does.
 
-/** One agent row, as Maestro's /api/fleet serves it. */
+/** One agent row, as ByteHive's /api/fleet serves it. */
 export interface FleetAgent {
   id: string;
   name: string;
@@ -31,7 +31,7 @@ export const FLEET_DEFAULT_URL = "http://127.0.0.1:8477";
 const str = (v: unknown): string => (typeof v === "string" ? v : "");
 
 /** Parse the /api/fleet body, tolerating missing fields (a newer or older
- *  Maestro than this was written against still yields a usable snapshot). */
+ *  ByteHive than this was written against still yields a usable snapshot). */
 export function parseFleetSnapshot(json: unknown): FleetSnapshot {
   if (!json || typeof json !== "object") return { agents: [], output: {} };
   const o = json as Record<string, unknown>;
@@ -62,18 +62,34 @@ export function parseFleetSnapshot(json: unknown): FleetSnapshot {
 }
 
 export interface FetchFleetOptions {
-  /** Dashboard session cookie, only when Maestro's dashboard has a password. */
+  /** Dashboard session cookie, only when ByteHive's dashboard has a password. */
   cookie?: string;
   signal?: AbortSignal;
 }
 
-/** GET /api/fleet. The dashboard server wants `X-Maestro: 1` on API calls;
- *  a non-browser client sends no Origin, which the server accepts. */
+/** The dashboard wants its marker on API calls. X-Maestro is for builds from
+ *  before the ByteHive name; a non-browser client sends no Origin, which the
+ *  server accepts. */
+const API_HEADERS = { "X-ByteHive": "1", "X-Maestro": "1" };
+
+/** Sign in to a dashboard that has a password; returns the session cookie. */
+export async function loginFleet(baseUrl: string, password: string): Promise<string> {
+  const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/login`, {
+    method: "POST",
+    headers: { ...API_HEADERS, "Content-Type": "application/json" },
+    body: JSON.stringify({ password }),
+  });
+  const cookie = res.headers.get("set-cookie")?.split(";")[0];
+  if (!res.ok || !cookie) throw new Error(`dashboard sign-in failed: HTTP ${res.status}`);
+  return cookie;
+}
+
+/** GET /api/fleet. */
 export async function fetchFleet(
   baseUrl: string = FLEET_DEFAULT_URL,
   opts: FetchFleetOptions = {},
 ): Promise<FleetSnapshot> {
-  const headers: Record<string, string> = { "X-Maestro": "1" };
+  const headers: Record<string, string> = { ...API_HEADERS };
   if (opts.cookie) headers.Cookie = opts.cookie;
   const res = await fetch(`${baseUrl.replace(/\/+$/, "")}/api/fleet`, {
     headers,

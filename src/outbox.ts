@@ -1,6 +1,6 @@
-// Rescue send path: one JSON line appended to <workspace>/.maestro/outbox.jsonl.
-// Maestro drains the file and types the message into the target agent's
-// terminal with Enter. Supervisor only writes; delivery stays Maestro's job.
+// Rescue send path: one JSON line appended to <workspace>/.bytehive/outbox.jsonl.
+// ByteHive drains the file and types the message into the target agent's
+// terminal with Enter. Supervisor only writes; delivery stays ByteHive's job.
 //
 // Keep rescue messages SHORT (one burst): a TUI still assembling a long burst
 // reads the trailing Enter as a newline and the message sits unsent. Long
@@ -8,6 +8,7 @@
 
 import { appendFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { stateDir } from "./paths.js";
 
 export interface OutboxMessage {
   from: string | null;
@@ -35,8 +36,9 @@ export function rescueBody(text: string, fileRelPath: string): RescueBody {
   };
 }
 
-/** Append one line to <dir>/.maestro/outbox.jsonl, creating dirs as needed. */
+/** Append one line to the workspace's outbox.jsonl, creating dirs as needed. */
 export async function appendOutboxLine(dir: string, line: string): Promise<void> {
-  await mkdir(join(dir, ".maestro"), { recursive: true });
-  await appendFile(join(dir, ".maestro", "outbox.jsonl"), line, "utf8");
+  const state = stateDir(dir);
+  await mkdir(state, { recursive: true });
+  await appendFile(join(state, "outbox.jsonl"), line, "utf8");
 }

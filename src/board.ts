@@ -1,8 +1,9 @@
-// Read-only view of a Maestro workspace board: .maestro/board.json on disk
+// Read-only view of a ByteHive workspace board: .bytehive/board.json on disk
 // ({ version: 2, lists: [...] }). Never written, only read.
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { stateDir } from "./paths.js";
 
 export interface BoardCard {
   id: string;
@@ -54,11 +55,11 @@ export function parseBoardFile(content: string): BoardFile {
   };
 }
 
-/** Read <dir>/.maestro/board.json. Null when the file doesn't exist yet. */
+/** Read the workspace's board.json. Null when the file doesn't exist yet. */
 export async function readBoardFile(dir: string): Promise<BoardFile | null> {
   let content: string;
   try {
-    content = await readFile(join(dir, ".maestro", "board.json"), "utf8");
+    content = await readFile(join(stateDir(dir), "board.json"), "utf8");
   } catch (e) {
     if ((e as { code?: string }).code === "ENOENT") return null;
     throw e;
